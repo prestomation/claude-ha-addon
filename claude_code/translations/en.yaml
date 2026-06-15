@@ -1,0 +1,13 @@
+---
+configuration:
+  log_level:
+    name: Log level
+    description: >-
+      How verbose the add-on and server logs should be. Use "debug" when
+      troubleshooting, "info" for normal operation.
+  working_directory:
+    name: Default working directory
+    description: >-
+      The default folder Claude Code starts a session in. "/homeassistant" is
+      your Home Assistant configuration directory. You can pick a different
+      mapped folder (e.g. /share, /media) when starting a session.

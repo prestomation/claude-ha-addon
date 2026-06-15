@@ -1,0 +1,26 @@
+{
+  "name": "claude-ha-addon",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Home Assistant add-on that runs Claude Code with a mobile-first ACP session UI",
+  "workspaces": [
+    "shared",
+    "server",
+    "web",
+    "mock-acp",
+    "e2e"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build -w shared && npm run build -w server && npm run build -w web",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w web && npm run typecheck -w mock-acp",
+    "test": "npm run test -w server && npm run test -w web",
+    "lint": "npm run typecheck",
+    "e2e": "npm run -w e2e test",
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w web"
+  }
+}

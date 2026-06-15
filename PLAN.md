@@ -12,17 +12,26 @@ plan/auto mode, and not much else.
 | Area | Choice |
 | --- | --- |
 | Backend | **Node.js + TypeScript** (shares runtime with the ACP adapter) |
-| Frontend | **React + Vite + Tailwind**, reusing the **official ACP TypeScript SDK** for the protocol layer (not a whole 3rd-party UI app) |
-| CI E2E | **Playwright against a deterministic mock ACP agent**, screenshots checked in; **separate secret-gated job** against a real `CLAUDE_CODE_OAUTH_TOKEN` |
+| Frontend | **Lit 3 + `@material/web`**, styled with **Home Assistant theme CSS variables** (inherits HA light/dark theming) — HA's own component stack |
+| Protocol | A small **shared ACP/JSON-RPC layer** (`@addon/shared`) used by both the server (ACP client) and the mock agent |
+| CI E2E | **Playwright against a deterministic mock ACP agent**, run inside the pinned Playwright Docker image; screenshots checked in; **separate secret-gated job** against a real `CLAUDE_CODE_OAUTH_TOKEN` |
 | Auth | **Both** OAuth (subscription) **and** API key |
 
-### On reusing an existing ACP UI
-`formulahendry/acp-ui` (Vue + Tauri) and an "ACP Components" library exist, but
-they target a power-user, multi-agent, traffic-monitor experience and are Vue.
-Our panel is the opposite: minimal, embedded under HA ingress, mobile-first,
-with bespoke auth. **We reuse the genuinely modular piece — the official ACP
-TypeScript SDK (JSON-RPC types, session lifecycle, `session/update` streaming)
-— and build the thin UI ourselves**, borrowing UX patterns from `acp-ui`.
+### On the frontend stack and reusing an existing ACP UI
+The UI is built with **Lit + Material Web Components** and themed with Home
+Assistant's CSS custom properties (`--primary-color`, `--card-background-color`,
+…) plus a `prefers-color-scheme` dark mapping, so it matches HA's look and
+inherits theming. `formulahendry/acp-ui` (Vue + Tauri) exists but targets a
+power-user, multi-agent traffic-monitor experience — the opposite of a minimal
+embedded mobile panel — so we build the thin UI ourselves.
+
+### On the protocol layer
+Rather than depend on an external ACP SDK, the repo ships a small, self-contained
+ACP + JSON-RPC implementation in `@addon/shared` (ndjson framing, typed ACP
+methods, the app-level WS/REST protocol). It is consumed by the server (acting as
+the ACP *client*) and by the mock agent, and the real `claude-code-acp` adapter
+is spawned as the production agent. This keeps the build robust and the mock
+trivial; swapping in an upstream SDK later is isolated to one package.
 
 ## How the pieces fit
 

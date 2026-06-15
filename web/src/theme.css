@@ -1,0 +1,77 @@
+/*
+ * Home Assistant theming. Define HA CSS custom properties with fallbacks
+ * matching HA's default LIGHT theme, override them for dark via
+ * prefers-color-scheme, and map Material Web (--md-sys-color-*) tokens onto the
+ * HA variables so MWC components inherit HA colors.
+ */
+
+:root {
+  --primary-color: #03a9f4;
+  --accent-color: #ff9800;
+  --primary-background-color: #fafafa;
+  --secondary-background-color: #e5e5e5;
+  --card-background-color: #ffffff;
+  --primary-text-color: #212121;
+  --secondary-text-color: #727272;
+  --divider-color: rgba(0, 0, 0, 0.12);
+  --error-color: #db4437;
+  --ha-card-border-radius: 12px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-color: #03a9f4;
+    --accent-color: #ff9800;
+    --primary-background-color: #111111;
+    --secondary-background-color: #202020;
+    --card-background-color: #1c1c1c;
+    --primary-text-color: #e1e1e1;
+    --secondary-text-color: #9b9b9b;
+    --divider-color: rgba(225, 225, 225, 0.12);
+    --error-color: #ff5252;
+    --ha-card-border-radius: 12px;
+
+    color-scheme: dark;
+  }
+}
+
+/* Map Material Web design tokens onto HA variables. */
+:root {
+  --md-sys-color-primary: var(--primary-color);
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-secondary: var(--accent-color);
+  --md-sys-color-surface: var(--card-background-color);
+  --md-sys-color-surface-container: var(--card-background-color);
+  --md-sys-color-surface-container-high: var(--secondary-background-color);
+  --md-sys-color-surface-container-highest: var(--secondary-background-color);
+  --md-sys-color-on-surface: var(--primary-text-color);
+  --md-sys-color-on-surface-variant: var(--secondary-text-color);
+  --md-sys-color-background: var(--primary-background-color);
+  --md-sys-color-on-background: var(--primary-text-color);
+  --md-sys-color-outline: var(--divider-color);
+  --md-sys-color-outline-variant: var(--divider-color);
+  --md-sys-color-error: var(--error-color);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family:
+    Roboto, "Helvetica Neue", -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--primary-background-color);
+  color: var(--primary-text-color);
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+app-root {
+  display: block;
+  height: 100dvh;
+}
