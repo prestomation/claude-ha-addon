@@ -82,8 +82,14 @@ export class SessionView extends LitElement {
     }
     .item {
       line-height: 1.5;
-      white-space: pre-wrap;
       word-break: break-word;
+    }
+    /* Only free-text messages preserve authored newlines; structured cards
+       (tool_call, plan) must not, or template indentation renders as gaps. */
+    .item[data-role="user"],
+    .item[data-role="assistant"][data-kind="text"],
+    .item[data-kind="thought"] {
+      white-space: pre-wrap;
     }
     .item[data-role="user"] {
       align-self: flex-end;
