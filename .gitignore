@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+*.log
+/data/
+.env
+.env.*
+# Playwright
+claude_code/e2e/test-results/
+claude_code/e2e/playwright-report/
+claude_code/e2e/.cache/
+# Keep checked-in baseline screenshots (claude_code/e2e/screenshots) — do NOT ignore them

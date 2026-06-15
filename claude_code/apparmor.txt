@@ -1,0 +1,53 @@
+#include <tunables/global>
+
+profile claude_code flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # Capabilities
+  file,
+  signal (send) set=(kill,term,int,hup,cont),
+
+  # S6-Overlay / supervisor
+  /init ix,
+  /bin/** ix,
+  /usr/bin/** ix,
+  /usr/local/bin/** ix,
+  /run/{s6,s6-rc*,service}/** ix,
+  /package/** ix,
+  /command/** ix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+  /run/{,**} rwk,
+  /dev/tty rw,
+
+  # Bashio / config access
+  /usr/lib/bashio/** ix,
+  /tmp/** rwk,
+
+  # Node.js runtime and the built application
+  /usr/bin/node ix,
+  /usr/lib/node_modules/** r,
+  /usr/lib/node_modules/.bin/** ix,
+  /app/** r,
+  /app/server/dist/** r,
+  /app/web/dist/** r,
+
+  # The ACP agent (Claude Code) and its child processes
+  /usr/lib/node_modules/@anthropic-ai/** rix,
+  /usr/lib/node_modules/@zed-industries/** rix,
+
+  # Persistent add-on data (auth/creds, Claude config). HOME points here.
+  /data/** rwk,
+  /data rwk,
+
+  # Mapped host folders.
+  /homeassistant/** rwk,
+  /share/** rwk,
+  /media/** rwk,
+  /ssl/** r,
+  /backup/** r,
+
+  # Network access (REST/WS server + outbound to Anthropic).
+  network,
+}
