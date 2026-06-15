@@ -75,43 +75,51 @@ export class SessionView extends LitElement {
     .transcript {
       flex: 1;
       overflow-y: auto;
-      padding: 12px;
+      padding: 8px 12px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 4px;
     }
     .item {
-      max-width: 88%;
-      padding: 10px 12px;
-      border-radius: 14px;
-      line-height: 1.4;
-      white-space: pre-wrap;
+      line-height: 1.5;
       word-break: break-word;
+    }
+    /* Only free-text messages preserve authored newlines; structured cards
+       (tool_call, plan) must not, or template indentation renders as gaps. */
+    .item[data-role="user"],
+    .item[data-role="assistant"][data-kind="text"],
+    .item[data-kind="thought"] {
+      white-space: pre-wrap;
     }
     .item[data-role="user"] {
       align-self: flex-end;
+      max-width: 85%;
+      margin: 4px 0;
+      padding: 7px 12px;
+      border-radius: 14px;
+      border-bottom-right-radius: 4px;
       background: var(--primary-color);
       color: #fff;
-      border-bottom-right-radius: 4px;
     }
     .item[data-role="assistant"][data-kind="text"] {
-      align-self: flex-start;
-      background: var(--secondary-background-color);
+      align-self: stretch;
+      background: transparent;
       color: var(--primary-text-color);
-      border-bottom-left-radius: 4px;
+      padding: 2px 0;
     }
     .item[data-kind="thought"] {
-      align-self: flex-start;
+      align-self: stretch;
       font-style: italic;
       color: var(--secondary-text-color);
       background: transparent;
-      padding: 2px 4px;
+      padding: 2px 0;
     }
     .item[data-kind="tool_call"] {
       align-self: stretch;
-      max-width: 100%;
       background: var(--card-background-color);
       border: 1px solid var(--divider-color);
+      border-radius: 8px;
+      padding: 5px 10px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -124,14 +132,15 @@ export class SessionView extends LitElement {
     }
     .item[data-kind="plan"] {
       align-self: stretch;
-      max-width: 100%;
       background: var(--card-background-color);
       border: 1px solid var(--divider-color);
+      border-radius: 8px;
+      padding: 6px 10px;
     }
     .plan-entry {
       display: flex;
       gap: 8px;
-      padding: 2px 0;
+      padding: 1px 0;
     }
     .plan-entry[data-status="completed"] {
       color: var(--secondary-text-color);
