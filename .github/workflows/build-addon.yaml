@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-amd64:
-    name: Build image (amd64)
+    name: Build image (amd64) + boot test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,7 +15,7 @@ jobs:
       - name: Build amd64 image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: claude_code
           file: claude_code/Dockerfile
           platforms: linux/amd64
           push: false
@@ -24,6 +24,19 @@ jobs:
             BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
             BUILD_ARCH=amd64
           tags: claude_code:amd64
+      - name: Boot test (image starts and serves /api/status)
+        run: |
+          docker run -d --name cc -p 8099:8099 claude_code:amd64
+          ok=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8099/api/status; then ok=1; break; fi
+            sleep 2
+          done
+          echo
+          echo "--- container logs ---"
+          docker logs cc || true
+          docker rm -f cc || true
+          test "$ok" = 1
 
   build-aarch64:
     name: Build image (aarch64)
@@ -37,7 +50,7 @@ jobs:
       - name: Build aarch64 image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: claude_code
           file: claude_code/Dockerfile
           platforms: linux/arm64
           push: false

@@ -60,14 +60,17 @@ export class AuthManager {
     }
     const method = this.detectMethod();
     let claudeVersion: string | null = null;
-    let ready = false;
     try {
       const { stdout } = await execFileAsync("claude", ["--version"], { timeout: 8000 });
       claudeVersion = stdout.trim();
-      ready = true;
     } catch {
-      ready = false;
+      claudeVersion = null;
     }
+    // "ready" means both Claude Code and the ACP adapter we actually spawn are
+    // present, not just the `claude` CLI.
+    const agentBin = this.cfg.agentCmd.trim().split(/\s+/)[0];
+    const agentPresent = await this.binaryExists(agentBin);
+    const ready = claudeVersion !== null && agentPresent;
     return { authenticated: method !== "none", method, claudeVersion, ready };
   }
 
@@ -84,11 +87,32 @@ export class AuthManager {
   }
 
   private async validateApiKey(key: string): Promise<void> {
-    const res = await fetch("https://api.anthropic.com/v1/models", {
-      headers: { "x-api-key": key, "anthropic-version": "2023-06-01" },
-    });
-    if (!res.ok) {
-      throw new Error(`API key rejected (HTTP ${res.status})`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/models", {
+        headers: { "x-api-key": key, "anthropic-version": "2023-06-01" },
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        throw new Error(`API key rejected (HTTP ${res.status})`);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new Error("Timed out validating API key");
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private async binaryExists(bin: string): Promise<boolean> {
+    try {
+      await execFileAsync("sh", ["-c", `command -v ${JSON.stringify(bin)}`], { timeout: 4000 });
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -115,20 +139,42 @@ export class AuthManager {
   private readUrlFromChild(child: ChildProcessWithoutNullStreams): Promise<string> {
     return new Promise((resolveUrl, reject) => {
       let buf = "";
+      let settled = false;
+      const cleanup = () => {
+        clearTimeout(timer);
+        child.stdout.off("data", onData);
+        child.stderr.off("data", onData);
+        child.off("error", onError);
+        child.off("exit", onExit);
+      };
       const onData = (d: Buffer) => {
-        buf += d.toString();
-        const match = buf.match(/https?:\/\/\S+/);
-        if (match) {
-          child.stdout.off("data", onData);
-          child.stderr.off("data", onData);
+        // Strip ANSI escape sequences before scanning for the URL, then trim
+        // trailing punctuation/brackets the CLI may print around it.
+        buf += d.toString().replace(/\[[0-9;]*[A-Za-z]/g, "");
+        const match = buf.match(/https?:\/\/[^\s)\]}>"']+/);
+        if (match && !settled) {
+          settled = true;
+          cleanup();
           resolveUrl(match[0]);
         }
       };
+      const onError = (err: Error) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(err);
+      };
+      const onExit = (code: number | null) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error(`setup-token exited early (code ${code})`));
+      };
+      const timer = setTimeout(() => onError(new Error("timed out waiting for authorization URL")), 20000);
       child.stdout.on("data", onData);
       child.stderr.on("data", onData);
-      child.on("error", reject);
-      child.on("exit", (code) => reject(new Error(`setup-token exited early (code ${code})`)));
-      setTimeout(() => reject(new Error("timed out waiting for authorization URL")), 20000);
+      child.once("error", onError);
+      child.once("exit", onExit);
     });
   }
 

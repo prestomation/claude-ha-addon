@@ -7,7 +7,7 @@ dist/
 .env
 .env.*
 # Playwright
-/e2e/test-results/
-/e2e/playwright-report/
-/e2e/.cache/
-# Keep checked-in baseline screenshots (e2e/screenshots) — do NOT ignore them
+claude_code/e2e/test-results/
+claude_code/e2e/playwright-report/
+claude_code/e2e/.cache/
+# Keep checked-in baseline screenshots (claude_code/e2e/screenshots) — do NOT ignore them

@@ -2,20 +2,15 @@
 # Claude Code — Home Assistant add-on image
 # =============================================================================
 #
-# BUILD CONTEXT: the REPOSITORY ROOT (not the claude_code/ folder).
+# BUILD CONTEXT: this add-on directory (the one containing config.yaml).
 #
-#   docker build -f claude_code/Dockerfile -t claude_code .
+#   docker build -f claude_code/Dockerfile -t claude_code claude_code
 #
-# The whole monorepo is copied in and built inside the image, so no prior
-# `npm run build` on the host is required. A repo-root .dockerignore keeps
-# node_modules/dist/.git out of the context.
-#
-# NOTE for the Home Assistant builder: by default HA's builder uses the add-on
-# directory (the one containing config.yaml) as the Docker build context. This
-# add-on must instead be built with the repository root as the context. The CI
-# build job (defined elsewhere) invokes the builder/docker with the correct
-# `-f claude_code/Dockerfile .` context. When testing locally, run the command
-# shown above from the repo root.
+# The whole app (an npm-workspaces monorepo) lives inside this directory, so the
+# Home Assistant Supervisor's default build — which uses the add-on directory as
+# the Docker build context — works without any special handling. The app is
+# built inside the image; no prior `npm run build` on the host is required. A
+# .dockerignore in this directory keeps node_modules/dist out of the context.
 # =============================================================================
 
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
@@ -86,7 +81,7 @@ RUN npm run build \
 # s6-overlay service definitions (longrun that starts the Fastify server).
 # Copy the rootfs from the add-on folder and make the run scripts executable.
 # -----------------------------------------------------------------------------
-COPY claude_code/rootfs/ /
+COPY rootfs/ /
 
 RUN chmod +x /etc/s6-overlay/s6-rc.d/claude-server/run
 

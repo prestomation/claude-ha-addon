@@ -134,5 +134,6 @@ export type ServerMessage =
     }
   | { type: "turn_started"; sessionId: string }
   | { type: "turn_done"; sessionId: string; stopReason: StopReason }
+  | { type: "agent_stopped"; message: string }
   | { type: "error"; message: string; sessionId?: string }
   | { type: "pong" };

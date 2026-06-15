@@ -89,6 +89,33 @@ describe("SessionManager", () => {
     }
   });
 
+  it("rejects a second prompt while a turn is in progress", async () => {
+    let release!: () => void;
+    agent.prompt = () =>
+      new Promise((res) => {
+        release = () => res({ stopReason: "end_turn" });
+      });
+    const first = mgr.prompt("s1", "one"); // stays active (unresolved)
+    await mgr.prompt("s1", "two"); // should be rejected immediately
+    const errors = messages.filter((m) => m.type === "error");
+    expect(errors.some((e) => e.type === "error" && /in progress/i.test(e.message))).toBe(true);
+    release();
+    await first;
+  });
+
+  it("drains permissions and resets sessions when the agent exits", async () => {
+    let resolved: unknown = null;
+    agent.emit("permission", {
+      params: { sessionId: "s1", toolCall: { toolCallId: "t1", title: "x" }, options: [] },
+      resolve: (r: unknown) => {
+        resolved = r;
+      },
+    });
+    agent.emit("exit", 1);
+    expect(resolved).toEqual({ outcome: { outcome: "cancelled" } });
+    expect(messages.some((m) => m.type === "agent_stopped")).toBe(true);
+  });
+
   it("routes permission requests and responses", async () => {
     let resolved: unknown = null;
     agent.emit("permission", {

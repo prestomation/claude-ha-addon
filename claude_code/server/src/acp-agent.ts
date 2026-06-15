@@ -1,10 +1,12 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, realpath } from "node:fs/promises";
+import { resolve as resolvePath, dirname, basename, sep } from "node:path";
 import { EventEmitter } from "node:events";
 import {
   ACP,
   ACP_PROTOCOL_VERSION,
   JsonRpcPeer,
+  RpcError,
   type NewSessionResult,
   type PromptResult,
   type RequestPermissionParams,
@@ -92,12 +94,14 @@ export class AcpAgent extends EventEmitter {
     });
     peer.onRequest(ACP.FS_READ_TEXT_FILE, async (params) => {
       const { path } = params as { path: string };
-      const content = await readFile(path, "utf8");
+      const safe = await this.assertPathAllowed(path);
+      const content = await readFile(safe, "utf8");
       return { content };
     });
     peer.onRequest(ACP.FS_WRITE_TEXT_FILE, async (params) => {
       const { path, content } = params as { path: string; content: string };
-      await writeFile(path, content, "utf8");
+      const safe = await this.assertPathAllowed(path);
+      await writeFile(safe, content, "utf8");
       return {};
     });
 
@@ -110,6 +114,32 @@ export class AcpAgent extends EventEmitter {
   private requirePeer(): JsonRpcPeer {
     if (!this.peer) throw new Error("ACP agent is not running");
     return this.peer;
+  }
+
+  /**
+   * Guard the client-side filesystem handlers: the agent may only read/write
+   * within the configured working directories, never the add-on's /data volume
+   * (which holds credentials). Symlinks are resolved so they cannot escape.
+   * Returns the absolute path to use, or throws an RpcError.
+   */
+  private async assertPathAllowed(p: string): Promise<string> {
+    if (!p || typeof p !== "string") {
+      throw new RpcError(-32602, "path is required");
+    }
+    const abs = resolvePath(p);
+    const real = await realpathNearest(abs);
+    const within = (root: string) => {
+      const r = root.endsWith(sep) ? root : root + sep;
+      return real === root || real.startsWith(r);
+    };
+    const dataReal = await safeRealpath(this.cfg.dataDir);
+    if (within(dataReal)) {
+      throw new RpcError(-32602, "access to add-on data is not allowed");
+    }
+    for (const d of this.cfg.workingDirs) {
+      if (within(await safeRealpath(d.path))) return abs;
+    }
+    throw new RpcError(-32602, `path is outside the allowed working directories: ${p}`);
   }
 
   async newSession(cwd: string): Promise<NewSessionResult> {
@@ -151,7 +181,42 @@ export class AcpAgent extends EventEmitter {
   }
 }
 
+/** Split a command string into argv, honoring simple single/double quoting. */
 function splitCommand(cmd: string): string[] {
-  // Simple whitespace split; quoting is not needed for our commands.
-  return cmd.trim().split(/\s+/);
+  const out: string[] = [];
+  const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(cmd)) !== null) {
+    out.push(m[1] ?? m[2] ?? m[3]);
+  }
+  return out;
+}
+
+/** realpath, falling back to the resolved path when it does not exist yet. */
+async function safeRealpath(p: string): Promise<string> {
+  try {
+    return await realpath(p);
+  } catch {
+    return resolvePath(p);
+  }
+}
+
+/**
+ * Resolve the real path of the nearest existing ancestor and re-append the
+ * non-existent tail, so a not-yet-created file still resolves through symlinks.
+ */
+async function realpathNearest(abs: string): Promise<string> {
+  let cur = abs;
+  const tail: string[] = [];
+  for (;;) {
+    try {
+      const r = await realpath(cur);
+      return tail.length ? resolvePath(r, ...tail.reverse()) : r;
+    } catch {
+      const parent = dirname(cur);
+      if (parent === cur) return abs;
+      tail.push(basename(cur));
+      cur = parent;
+    }
+  }
 }

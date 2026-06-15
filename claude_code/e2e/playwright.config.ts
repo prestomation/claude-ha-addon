@@ -40,7 +40,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "sh -c 'rm -rf /tmp/e2e-data && node server/dist/index.js'",
+    // Build the app (shared/server/web/mock-acp) before serving so local runs
+    // never compare against stale output, then start the server in mock mode.
+    command:
+      "sh -c 'npm run build && npm run build -w mock-acp && rm -rf /tmp/e2e-data && node server/dist/index.js'",
     cwd: repoRoot,
     url: `${baseURL}/api/status`,
     reuseExistingServer: !process.env.CI,

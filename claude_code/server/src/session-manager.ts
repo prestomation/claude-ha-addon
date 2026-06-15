@@ -52,6 +52,31 @@ export class SessionManager {
       (p: { params: RequestPermissionParams; resolve: (r: RequestPermissionResult) => void }) =>
         this.onPermission(p.params, p.resolve),
     );
+    agent.on("exit", () => this.onAgentExit());
+  }
+
+  /**
+   * The agent subprocess died (crash, or auth change triggered a shutdown).
+   * Settle everything that was waiting on it so the UI never gets stuck:
+   * cancel parked permission prompts, end active turns, drop now-invalid
+   * sessions, and tell clients to reset.
+   */
+  private onAgentExit(): void {
+    for (const rt of this.sessions.values()) {
+      for (const [, resolve] of rt.pendingPermissions) {
+        resolve({ outcome: { outcome: "cancelled" } });
+      }
+      rt.pendingPermissions.clear();
+      if (rt.turnActive) {
+        rt.turnActive = false;
+        this.broadcast({ type: "turn_done", sessionId: rt.info.id, stopReason: "cancelled" });
+      }
+    }
+    this.sessions.clear();
+    this.broadcast({
+      type: "agent_stopped",
+      message: "The Claude Code agent stopped. Start a new session to continue.",
+    });
   }
 
   addClient(send: Send): () => void {
@@ -102,6 +127,14 @@ export class SessionManager {
 
   async prompt(sessionId: string, text: string): Promise<void> {
     const rt = this.requireSession(sessionId);
+    if (rt.turnActive) {
+      this.broadcast({
+        type: "error",
+        sessionId,
+        message: "A turn is already in progress for this session.",
+      });
+      return;
+    }
     rt.turnActive = true;
     rt.currentTextId = undefined;
     rt.currentThoughtId = undefined;

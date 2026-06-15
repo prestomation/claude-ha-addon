@@ -24,8 +24,8 @@ jobs:
             const marker = '<!-- pr-screenshots -->';
             const sha = context.payload.pull_request.head.sha;
             const repo = `${context.repo.owner}/${context.repo.repo}`;
-            const base = `https://raw.githubusercontent.com/${repo}/${sha}/e2e/screenshots`;
-            const dir = 'e2e/screenshots';
+            const base = `https://raw.githubusercontent.com/${repo}/${sha}/claude_code/e2e/screenshots`;
+            const dir = 'claude_code/e2e/screenshots';
             if (!fs.existsSync(`${dir}/mobile`)) {
               core.info('No screenshots directory; skipping.');
               return;

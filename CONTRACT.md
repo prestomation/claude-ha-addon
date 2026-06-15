@@ -1,5 +1,10 @@
 # Internal build contract
 
+> **Layout note:** all app packages live under the add-on directory
+> `claude_code/` (so the add-on folder is the Docker build context). Paths below
+> are written relative to `claude_code/` — e.g. `server/src/...` means
+> `claude_code/server/src/...`.
+
 This file pins the shapes and conventions every package must follow so the
 parts integrate. Source of truth for types is `shared/src/*` (package
 `@addon/shared`). Read those files; do not redefine these types locally.

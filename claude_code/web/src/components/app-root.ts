@@ -22,12 +22,35 @@ export class AppRoot extends LitElement {
       height: 100%;
       color: var(--secondary-text-color);
     }
+    .notice {
+      position: fixed;
+      top: env(safe-area-inset-top, 0);
+      left: 0;
+      right: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--error-color, #db4437);
+      color: #fff;
+      font-size: 14px;
+    }
+    .notice-dismiss {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+    }
   `;
 
   private connection = new Connection();
 
   @state() private view: View = "loading";
   @state() private session: SessionInfo | null = null;
+  @state() private notice: string | null = null;
 
   private unsubscribe?: () => void;
 
@@ -57,10 +80,16 @@ export class AppRoot extends LitElement {
   private handle(msg: ServerMessage) {
     if (msg.type === "session_created") {
       this.session = msg.session;
+      this.notice = null;
       this.view = "session";
     } else if (msg.type === "session_loaded") {
       this.session = msg.session;
       this.view = "session";
+    } else if (msg.type === "agent_stopped") {
+      // The agent died; drop the dead session and return to the list.
+      this.session = null;
+      this.notice = msg.message;
+      if (this.view === "session") this.view = "list";
     }
   }
 
@@ -85,6 +114,12 @@ export class AppRoot extends LitElement {
   render() {
     return html`
       <div data-testid="app-root" style="display:contents">
+        ${this.notice
+          ? html`<div class="notice" data-testid="notice" role="alert">
+              ${this.notice}
+              <button class="notice-dismiss" @click=${() => (this.notice = null)}>✕</button>
+            </div>`
+          : null}
         ${this.renderView()}
       </div>
     `;

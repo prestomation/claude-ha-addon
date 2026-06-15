@@ -73,9 +73,11 @@ credentials and Claude config) — no configuration required.
 
 ## Architecture
 
-The repository is an npm-workspaces monorepo. The `server/` (Node/TypeScript,
-Fastify) serves the built `web/` single-page app and bridges browser clients to
-Claude Code over ACP:
+The app is an npm-workspaces monorepo that lives **inside the add-on directory**
+(`claude_code/`), so the add-on folder is self-contained and the Home Assistant
+Supervisor can build it directly. The `claude_code/server/` (Node/TypeScript,
+Fastify) serves the built `claude_code/web/` single-page app and bridges browser
+clients to Claude Code over ACP:
 
 ```
 browser (Lit UI)  --REST + WS-->  server (Fastify, ACP client)  --stdio ACP-->  agent
@@ -100,20 +102,25 @@ Everything Home Assistant needs lives in [`claude_code/`](./claude_code):
   reads the options via `bashio` and runs the Fastify server.
 - `apparmor.txt`, `translations/en.yaml`, `icon.png`, `logo.png`, `CHANGELOG.md`.
 
-> **Build context note:** the image is built with the **repository root** as the
-> Docker context (`docker build -f claude_code/Dockerfile -t claude_code .`), so
-> the whole monorepo can be copied in and built. The repo-root `.dockerignore`
-> keeps `node_modules`/`dist`/`.git` out of the context. The s6 `run` script is
-> made executable by a `chmod +x` step in the `Dockerfile` (git alone can't
-> guarantee the executable bit).
+> **Build context:** the image is built with the **add-on directory**
+> (`claude_code/`) as the Docker context — exactly what the HA Supervisor uses by
+> default — so `docker build -f claude_code/Dockerfile claude_code` works and
+> "Install" in Home Assistant builds the add-on with no special handling. A
+> `.dockerignore` in `claude_code/` keeps `node_modules`/`dist` out of the
+> context. The s6 `run` script is made executable by a `chmod +x` step in the
+> `Dockerfile`.
 
 ## Development
 
-This is a standard npm workspaces monorepo (Node >= 20, ESM, TypeScript 5.6).
-The root owns the lockfile — do not run `npm install` inside a package.
+This is a standard npm workspaces monorepo (Node >= 20, ESM, TypeScript 5.6),
+rooted at `claude_code/`. The root owns the lockfile — do not run `npm install`
+inside a package.
 
 ```bash
-# Install all workspace dependencies (from the repo root)
+# All commands run from the add-on root
+cd claude_code
+
+# Install all workspace dependencies
 npm install
 
 # Build shared + server + web
